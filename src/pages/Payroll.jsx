@@ -3,6 +3,8 @@ import { attendanceStore, getEmployees } from '../database/storage';
 import { calculateEmployeeAttendance } from '../logic/attendanceCalculator';
 import { calculateSalary } from '../logic/salaryCalculator';
 import { AlertTriangle, Loader, FileSpreadsheet, FileText } from 'lucide-react';
+import { exportPayrollExcel } from '../export/excelExport';
+import { exportPayrollPDF } from '../export/pdfExport';
 
 export default function Payroll() {
   const [employees, setEmployees] = useState([]);
@@ -39,7 +41,6 @@ export default function Payroll() {
       const results = attendanceData.records.map(record => {
         const employee = employees.find(emp => String(emp.id) === record.employeeId);
         if (!employee) {
-          // Use default values if employee not in DB
           const fakeEmp = {
             id: record.employeeId,
             name: record.employeeName,
@@ -70,6 +71,19 @@ export default function Payroll() {
     fine: acc.fine + row.attendance.totalFine,
     advance: acc.advance + row.salary.advance
   }), { gross: 0, net: 0, fine: 0, advance: 0 });
+
+  const handleExportExcel = () => {
+    const month = attendanceData?.month;
+    const year = attendanceData?.year;
+    const fileName = `Payroll_${new Date(2000, (month||1)-1).toLocaleString('default', { month: 'long' })}_${year||''}.xlsx`;
+    exportPayrollExcel(payrollData, month, year, fileName);
+  };
+
+  const handleExportPDF = () => {
+    const month = attendanceData?.month;
+    const year = attendanceData?.year;
+    exportPayrollPDF(payrollData, month, year);
+  };
 
   if (loading) {
     return (
@@ -107,13 +121,21 @@ export default function Payroll() {
           )}
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition" disabled>
+          <button
+            onClick={handleExportExcel}
+            disabled={payrollData.length === 0}
+            className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
+          >
             <FileSpreadsheet size={16} />
-            Excel
+            Export Excel
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition" disabled>
+          <button
+            onClick={handleExportPDF}
+            disabled={payrollData.length === 0}
+            className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
+          >
             <FileText size={16} />
-            PDF
+            Export PDF
           </button>
         </div>
       </div>
